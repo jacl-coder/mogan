@@ -1,0 +1,600 @@
+<TMU|<tuple|1.1.0|2025.0.0>>
+
+<style|<tuple|generic|chinese|literate|elvish|reduced-margins|doc>>
+
+<\body>
+  <\hide-preamble>
+    <assign|font|math=Latin Modern Math,cjk=Noto CJK SC,CMU>
+  </hide-preamble>
+
+  <doc-data|<doc-title|Elvish插件>>
+
+  <section|许可证>
+
+  本文档是浙江三鲤网络科技有限公司内部文档，概不外传。
+
+  <\scm-chunk|progs/init-elvish.scm|false|true>
+    ;;
+
+    ;; COPYRIGHT: (C) 2025 \ Liii Network Inc
+
+    ;; All rights reverved.
+
+    ;;
+
+    \;
+  </scm-chunk>
+
+  <\scm-chunk|progs/code/elvish-lang.scm|false|true>
+    ;;
+
+    ;; COPYRIGHT: (C) 2025 \ Liii Network Inc
+
+    ;; All rights reverved.
+
+    ;;
+
+    \;
+  </scm-chunk>
+
+  <\scm-chunk|progs/data/elvish.scm|false|true>
+    ;;
+
+    ;; COPYRIGHT: (C) 2025 \ Liii Network Inc
+
+    ;; All rights reverved.
+
+    ;;
+
+    \;
+  </scm-chunk>
+
+  <\scm-chunk|progs/binary/elvish.scm|false|true>
+    ;;
+
+    ;; COPYRIGHT: (C) 2025 \ Liii Network Inc
+
+    ;; All rights reverved.
+
+    ;;
+
+    \;
+  </scm-chunk>
+
+  <section|如何学习Elvish>
+
+  <\enumerate>
+    <item>Elvish官网：<slink|https://elv.sh/learn/>
+
+    <item>Elvish脚本编程基础：<slink|https://www.bilibili.com/video/BV1ih4y1w7ZC/>
+
+    <item>Elvish的结构化IO：<slink|https://www.bilibili.com/video/BV1w841167QK/>
+  </enumerate>
+
+  <section|测试>
+
+  <subsection|可复现的开发环境>
+
+  默认情况下，我们所使用的Elvish插件是Liii STEM内置的Elvish插件。内置的Elvish通常在TEXMACS_PATH下，是不可更改的，非内置的Elvish插件通常在TEXMACS_HOME_PATH下，是可以更改的，这是两者的区别。
+
+  为了构建一个可复现的开发环境，可以分为两个步骤操作：
+
+  <paragraph|第一步：移除Elvish相关目录>
+
+  首先我们使用Elvish插件将TEXMACS_HOME_PATH的Elvish相关目录移除：
+
+  <\session|elvish|default>
+    <\output>
+      Elvish plugin 0.0.1 by LiiiLabs
+    </output>
+
+    <\unfolded-io|Elvish] >
+      echo $E:TEXMACS_HOME_PATH
+    <|unfolded-io>
+      /home/da/.local/share/liiilabs
+    </unfolded-io>
+
+    <\input|Elvish] >
+      trash $E:TEXMACS_HOME_PATH/plugins/elvish
+    </input>
+
+    <\input|Elvish] >
+      \;
+    </input>
+  </session>
+
+  使用trash命令可以将相关目录移入回收站中，比直接使用rm命令更加安全。
+
+  <paragraph|第二步：验证Elvish的版本号>
+
+  <\session|elvish|default>
+    <\output>
+      Elvish plugin 0.0.1 by LiiiLabs
+    </output>
+
+    <\input>
+      Elvish]\ 
+    <|input>
+      \;
+    </input>
+  </session>
+
+  我们约定在开发过程中，我们所使用的插件版本号是以dev结尾的。
+
+  <subsection|如何测试本文档中的Elvish开发版>
+
+  <paragraph|第一步：将本文档中的代码部署至TEXMACS_HOME_PATH>
+
+  点击菜单项：<menu|Literate|Build buffer>
+
+  <paragraph|第二步：插入Elvish会话并验证相关功能>
+
+  重启Liii STEM，然后插入Elvish会话，仔细观察欢迎信息中Elvish插件的版本，如果是以dev结尾的，说明您正在使用的是本文档部署的Elvish开发版。
+
+  <\session|elvish|default>
+    <\output>
+      Elvish plugin 0.0.2.dev by LiiiLabs
+    </output>
+
+    <\input>
+      Elvish]\ 
+    <|input>
+      \;
+    </input>
+  </session>
+
+  <subsection|测试用例>
+
+  Elvish默认的当前工作目录应该和<elvish-lang|$E:HOME>一致：
+
+  <\session|elvish|default>
+    <\unfolded-io|Elvish] >
+      eq $E:HOME (pwd)
+    <|unfolded-io>
+      $true
+    </unfolded-io>
+
+    <\input|Elvish] >
+      \;
+    </input>
+  </session>
+
+  <section|实现>
+
+  <subsection|插件入口>
+
+  首先加载Elvish二进制插件和数据插件：
+
+  <\scm-chunk|progs/init-elvish.scm|true|true>
+    (use-modules (binary elvish))
+
+    \;
+
+    (lazy-format (data elvish) elvish)
+
+    \;
+  </scm-chunk>
+
+  Elvish代码的序列化：
+
+  <\scm-chunk|progs/init-elvish.scm|true|true>
+    (define (elvish-serialize lan t)
+
+    \ \ (with u (pre-serialize lan t)
+
+    \ \ \ \ (with s (texmacs-\<gtr\>code (stree-\<gtr\>tree u) "SourceCode")
+
+    \ \ \ \ \ \ (string-append \ s "\\n\<less\>EOF\<gtr\>\\n"))))
+
+    \;
+  </scm-chunk>
+
+  Elvish插件的Elvish实现入口：
+
+  <\scm-chunk|progs/init-elvish.scm|true|true>
+    (define (elvish-entry)
+
+    \ \ (if (url-exists? "$TEXMACS_HOME_PATH/plugins/elvish")
+
+    \ \ \ \ \ \ (url-\<gtr\>string "$TEXMACS_HOME_PATH/plugins/elvish/src/main.elv")
+
+    \ \ \ \ \ \ (url-\<gtr\>string "$TEXMACS_PATH/plugins/elvish/src/main.elv")))
+
+    \;
+  </scm-chunk>
+
+  Elvish插件的启动器：
+
+  <\scm-chunk|progs/init-elvish.scm|true|true>
+    (define (elvish-launcher)
+
+    \ \ (string-append (string-quote (url-\<gtr\>system (find-binary-elvish)))
+
+    \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ " "
+
+    \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ (string-quote (elvish-entry))))
+
+    \;
+  </scm-chunk>
+
+  Elvish插件的配置：
+
+  <\scm-chunk|progs/init-elvish.scm|true|false>
+    (plugin-configure elvish
+
+    \ \ (:require (has-binary-elvish?))
+
+    \ \ (:launch ,(elvish-launcher))
+
+    \ \ (:serializer ,elvish-serialize)
+
+    \ \ (:session "Elvish")
+
+    \ \ (:scripts "Elvish"))
+
+    \;
+  </scm-chunk>
+
+  <subsection|二进制插件>
+
+  <\scm-chunk|progs/binary/elvish.scm|true|false>
+    (texmacs-module (binary elvish)
+
+    \ \ (:use (binary common)))
+
+    \;
+
+    (define (elvish-binary-candidates)
+
+    \ \ (cond ((os-macos?)
+
+    \ \ \ \ \ \ \ \ \ (list "/opt/homebrew/bin/elvish"
+
+    \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ "/usr/local/bin/elvish"))
+
+    \ \ \ \ \ \ \ \ ((os-win32?)
+
+    \ \ \ \ \ \ \ \ \ (list
+
+    \ \ \ \ \ \ \ \ \ \ "$USERPROFILE\\\\scoop\\\\apps\\\\elvish\\\\current\\\\elvish.exe"))
+
+    \ \ \ \ \ \ \ \ (else
+
+    \ \ \ \ \ \ \ \ \ (list "/usr/bin/elvish"))))
+
+    \;
+
+    (tm-define (find-binary-elvish)
+
+    \ \ (:synopsis "Find the url to the elvish binary, return (url-none) if not found")
+
+    \ \ (find-binary (elvish-binary-candidates) "elvish"))
+
+    \;
+
+    (tm-define (has-binary-elvish?)
+
+    \ \ (not (url-none? (find-binary-elvish))))
+
+    \;
+
+    (tm-define (version-binary-elvish)
+
+    \ \ (version-binary (find-binary-elvish)))
+
+    \;
+  </scm-chunk>
+
+  <subsection|代码高亮描述>
+
+  <\enumerate>
+    <item>将<elvish-lang|use>作为关键字加入
+  </enumerate>
+
+  <\scm-chunk|progs/code/elvish-lang.scm|true|false>
+    (texmacs-module (code elvish-lang)
+
+    \ \ (:use (prog default-lang)))
+
+    \;
+
+    (tm-define (parser-feature lan key)
+
+    \ \ (:require (and (== lan "elvish") (== key "keyword")))
+
+    \ \ `(,(string-\<gtr\>symbol key)
+
+    \ \ \ \ (constant "$true" "$false")
+
+    \ \ \ \ (declare_type
+
+    \ \ \ \ \ "var" "set")
+
+    \ \ \ \ (keyword
+
+    \ \ \ \ \ "all" "assoc" "base" "benchmark" "bool" "break"
+
+    \ \ \ \ \ "call" "cd" "compact" "compare" "conj" "constantly"
+
+    \ \ \ \ \ "continue" "count" "defer" "deprecate" "dissoc" "drop"
+
+    \ \ \ \ \ "each" "eawk" "echo" "eq" "eval" "exact-num"
+
+    \ \ \ \ \ "exec" "exit" "external" "fail" "from-json" "from-lines"
+
+    \ \ \ \ \ "from-terminated" "get-env" "has-env" "has-external" "has-key" "has-value"
+
+    \ \ \ \ \ "is" "keys" "kind-of" "make-map" "nop" "not"
+
+    \ \ \ \ \ "not-eq" "ns" "num" "one" "only-bytes"
+
+    \ \ \ \ \ "only-values" "order" "peach" "pprint" "print" "printf"
+
+    \ \ \ \ \ "put" "rand" "randint" "range" "read-bytes" "read-line"
+
+    \ \ \ \ \ "read-upto" "render-styledown" "repeat" "repr" "resolve" "return"
+
+    \ \ \ \ \ "run-parallel" "search-external" "set-env" "show" "sleep" "slurp"
+
+    \ \ \ \ \ "src" "styled" "styled-segment" "take" "tilde-abbr" "time"
+
+    \ \ \ \ \ "to-json" "to-lines" "to-string" "to-terminated" "unset-env" "use-mod"
+
+    \ \ \ \ \ "wcswidth")))
+
+    \;
+
+    (tm-define (parser-feature lan key)
+
+    \ \ (:require (and (== lan "elvish") (== key "comment")))
+
+    \ \ `(,(string-\<gtr\>symbol key)
+
+    \ \ \ \ (inline "#")))
+
+    \;
+
+    (define (notify-elvish-syntax var val)
+
+    \ \ (syntax-read-preferences "elvish"))
+
+    \;
+
+    (define-preferences
+
+    \ \ ("syntax:elvish:none" "red" notify-elvish-syntax)
+
+    \ \ ("syntax:elvish:comment" "brown" notify-elvish-syntax)
+
+    \ \ ("syntax:elvish:keyword" "dark green" notify-elvish-syntax)
+
+    \ \ ("syntax:elvish:declare_type" "#0000c0" notify-elvish-syntax))
+
+    \;
+  </scm-chunk>
+
+  <subsection|数据插件>
+
+  <\scm-chunk|progs/data/elvish.scm|true|false>
+    (texmacs-module (data elvish))
+
+    \;
+
+    (define-format elvish
+
+    \ \ (:name "Elvish source code")
+
+    \ \ (:suffix "elv"))
+
+    \ \ 
+
+    (define (texmacs-\<gtr\>elvish x . opts)
+
+    \ \ (texmacs-\<gtr\>verbatim x (acons "texmacs-\<gtr\>verbatim:encoding" "SourceCode" '())))
+
+    \;
+
+    (define (elvish-\<gtr\>texmacs x . opts)
+
+    \ \ (code-\<gtr\>texmacs x))
+
+    \;
+
+    (define (elvish-snippet-\<gtr\>texmacs x . opts)
+
+    \ \ (code-snippet-\<gtr\>texmacs x))
+
+    \;
+
+    (converter texmacs-tree elvish-document
+
+    \ \ (:function texmacs-\<gtr\>elvish))
+
+    \;
+
+    (converter elvish-document texmacs-tree
+
+    \ \ (:function elvish-\<gtr\>texmacs))
+
+    \ \ 
+
+    (converter texmacs-tree elvish-snippet
+
+    \ \ (:function texmacs-\<gtr\>elvish))
+
+    \;
+
+    (converter elvish-snippet texmacs-tree
+
+    \ \ (:function elvish-snippet-\<gtr\>texmacs))
+
+    \;
+  </scm-chunk>
+
+  <\verbatim-chunk|packages/code/elvish.ts|false|false>
+    \<less\>TeXmacs\|2.1.4\<gtr\>
+
+    \;
+
+    \<less\>style\|source\<gtr\>
+
+    \;
+
+    \<less\>\\body\<gtr\>
+
+    \ \ \<less\>active*\|\<less\>\\src-title\<gtr\>
+
+    \ \ \ \ \<less\>src-package\|Elvish\|1.0\<gtr\>
+
+    \;
+
+    \ \ \ \ \<less\>\\src-purpose\<gtr\>
+
+    \ \ \ \ \ \ Markup for Elvish sessions.
+
+    \ \ \ \ \<less\>/src-purpose\<gtr\>
+
+    \;
+
+    \ \ \ \ \<less\>src-copyright\|2024\|Liii Network Inc\<gtr\>
+
+    \;
+
+    \ \ \ \ \<less\>\\src-license\<gtr\>
+
+    \ \ \ \ \ \ All rights reverved.
+
+    \ \ \ \ \<less\>/src-license\<gtr\>
+
+    \ \ \<less\>/src-title\<gtr\>\<gtr\>
+
+    \;
+
+    \ \ \<less\>use-module\|(data elvish)\<gtr\>
+
+    \;
+
+    \ \ \<less\>assign\|elvish-lang\|\<less\>macro\|body\|\<less\>with\|mode\|prog\|prog-language\|elvish\|font-family\|rm\|\<less\>arg\|body\<gtr\>\<gtr\>\<gtr\>\<gtr\>\ 
+
+    \;
+
+    \ \ \<less\>assign\|elvish-code\|\<less\>\\macro\|body\<gtr\>
+
+    \ \ \ \ \<less\>\\pseudo-code\<gtr\>
+
+    \ \ \ \ \ \ \<less\>elvish-lang\|\<less\>arg\|body\<gtr\>\<gtr\>
+
+    \ \ \ \ \<less\>/pseudo-code\<gtr\>
+
+    \ \ \<less\>/macro\<gtr\>\<gtr\>
+
+    \<less\>/body\<gtr\>
+
+    \;
+
+    \<less\>initial\|\<less\>\\collection\<gtr\>
+
+    \<less\>/collection\<gtr\>\<gtr\>
+  </verbatim-chunk>
+
+  <subsection|插件的Elvish实现>
+
+  <subsubsection|墨干的接口协议>
+
+  <subsubsection|Elvish插件的版本>
+
+  <subsubsection|初始化>
+
+  <subsubsection|读取、求值、打印的循环>
+
+  <\elvish-chunk|src/main.elv|false|false>
+    use str
+
+    \;
+
+    var flush_start = {
+
+    \ \ print "\\x02"
+
+    }
+
+    var flush_end = {
+
+    \ \ print "\\x05\\r\\n"
+
+    }
+
+    \;
+
+    var flush_utf8 = { \|content\|
+
+    \ \ $flush_start
+
+    \ \ print "utf8:"$content
+
+    \ \ $flush_end
+
+    }
+
+    \;
+
+    var ns = (ns [&tm_elvish="0.0.1"])
+
+    \;
+
+    var elvish_plugin_version = "v2025012216"
+
+    \;
+
+    $flush_utf8 (str:join "" ["Elvish plugin " $elvish_plugin_version " by LiiiLabs"])
+
+    \;
+
+    cd $E:HOME
+
+    \;
+
+    while true {
+
+    \ \ var line = (read-line)
+
+    \ \ if (not (eq $line "\<less\>EOF\<gtr\>")) {
+
+    \ \ \ \ try {
+
+    \ \ \ \ \ \ var result = [ (eval &ns=$ns $line) ]
+
+    \ \ \ \ \ \ for result_line $result {
+
+    \ \ \ \ \ \ \ \ $flush_utf8 (to-string $result_line)
+
+    \ \ \ \ \ \ } else {
+
+    \ \ \ \ \ \ \ \ $flush_utf8 ""
+
+    \ \ \ \ \ \ }
+
+    \ \ \ \ } catch e {
+
+    \ \ \ \ \ \ $flush_utf8 (to-string $e)
+
+    \ \ \ \ }
+
+    \ \ }
+
+    }
+
+    \;
+  </elvish-chunk>
+</body>
+
+<\initial>
+  <\collection>
+    <associate|page-height|auto>
+    <associate|page-medium|papyrus>
+    <associate|page-screen-margin|false>
+    <associate|page-type|a4>
+    <associate|page-width|auto>
+    <associate|save-aux|false>
+  </collection>
+</initial>
