@@ -1,0 +1,20 @@
+#!/usr/bin/env elvish
+
+if (!= (count $args) 2) {
+  echo "Usage: bin/liii name version"
+  exit 1
+}
+
+var name = $args[0]
+var version = $args[1]
+var tag = $args[0]"-"$args[1]
+
+var tmp = (mktemp -d '/tmp/liii-'$tag'-XXX')
+echo $tmp
+
+git clone --branch $tag --single-branch ssh://forgejo@code.liiistem.cn/LiiiLabs/liii.git $tmp
+
+rm -rf TeXmacs/plugins/$name
+
+cp -r $tmp/$name TeXmacs/plugins/
+
