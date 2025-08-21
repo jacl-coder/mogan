@@ -228,6 +228,7 @@ target ("goldfish") do
     add_packages("s7")
     add_packages("tbox")
     add_packages("argh")
+    add_packages("cpr")
     on_install(function (target)
     end)
 end
