@@ -1,0 +1,17 @@
+{
+  "version": 2,
+  "siliconflow.cn": {
+    "api_key": "sk-ukaarlrgpzkpqpacvxzcykhvdzqkahscocitkyhwroxyzwsv",
+    "base_url": "https://api.siliconflow.cn/v1"
+  },
+  "deepseek.com": {
+    "api_key": "sk-b37ca428d3634ff39ab49d2766d8efce",
+    "base_url": "https://api.deepseek.com/v1"
+  },
+  "openai.com": {
+  "api_key":"Fill in your secret key here",
+  "base_url":"https://api.openai.com/v1",
+  "proxy":{
+  
+  }}
+}

@@ -1,0 +1,9 @@
+#!/usr/bin/env elvish
+
+use platform
+
+if (eq $platform:os linux) {
+  /usr/share/liiilabs/plugins/goldfish/bin/goldfish $args[0]
+} else {
+  echo "OS Not Supported"
+}
