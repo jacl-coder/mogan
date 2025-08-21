@@ -19,7 +19,8 @@
 
           ;; state queries
           stream-tokenizer-complete-blocks
-          stream-tokenizer-pending-block)
+          stream-tokenizer-pending-block
+          display-tokenizer-state)
   (begin
 
    (define (markdown2latex-via-pandoc text-md pandoc-path)
@@ -148,7 +149,7 @@
        (else 'paragraph)))
 
 ;; 判断是否需要完成当前块
-   (define (should-complete-block prev-type new-type pending-lines)
+   (define (should-complete-block prev-type new-type)
      (cond
        ;; 如果类型变化，完成当前块
        ((not prev-type) #f)
@@ -186,61 +187,67 @@
      (let* ((prev-type     (stream-tokenizer-prev-type tokenizer))
             (pending-lines (stream-tokenizer-pending-lines tokenizer))
             (current-env   (stream-tokenizer-current-env tokenizer))
-            (line-type     (get-line-type line current-env))))
-     (cond
-       ;; 空行完成非段落块，段落块保留空白行
-       ((eq? line-type 'blank)
-        (cond
-          ((null? pending-lines) tokenizer)  ; 无内容跳过空行
-          ((eq? prev-type 'paragraph)
-           ;; 把空行作为段落块的一部分
-           (make-stream-tokenizer_
-               (stream-tokenizer-complete-blocks tokenizer)
-               (cons line pending-lines)
-               prev-type
-               #f))
-          (else
-           ;; 非段落块遇到空行完成当前块
-           (complete-pending-block tokenizer))))
-
-       ;; 处理围栏代码块（当前已经是fenced-block）
-       ((eq? current-env 'fenced-block)
-        (let ((new-pending (cons line pending-lines)))
-          (if (eq? line-type 'fenced-block)
-              ;; 结束围栏块
-              (let ((new-tokenizer (complete-pending-block
-                                    (make-stream-tokenizer_
-                                        (stream-tokenizer-complete-blocks tokenizer)
-                                        new-pending 'fenced-block #f))))
-                (make-stream-tokenizer_
-                    (stream-tokenizer-complete-blocks tokenizer)
-                    new-pending
-                    'fenced-block
-                    'fenced-block
-                    (stream-tokenizer-complete-blocks new-tokenizer)
-                    '() #f #f))
-              ;; 继续收集围栏块内容
+            (line-type     (get-line-type line current-env)))
+       (cond
+          ;; 空行完成非段落块，段落块保留空白行
+          ((eq? line-type 'blank)
+           (cond
+             ((null? pending-lines) tokenizer)  ; 无内容跳过空行
+             ((eq? prev-type 'paragraph)
+              ;; 把空行作为段落块的一部分
               (make-stream-tokenizer_
                   (stream-tokenizer-complete-blocks tokenizer)
-                  new-pending
-                  'fenced-block
-                  'fenced-block))))
+                  (cons line pending-lines)
+                  prev-type
+                  #f))
+             (else
+              ;; 非段落块遇到空行完成当前块
+              (complete-pending-block tokenizer))))
 
-       ;; 开始新的围栏代码块
-       ((eq? line-type 'fenced-block)
-        (let ((new-tokenizer (complete-pending-block tokenizer)))
-          (make-stream-tokenizer_
-              (stream-tokenizer-complete-blocks new-tokenizer)
-              (list line)
-              'fenced-block
-              'fenced-block)))
+          ;; 处理围栏代码块（当前已经是fenced-block）
+          ((eq? current-env 'fenced-block)
+           (let ((new-pending (cons line pending-lines)))
+             (if (eq? line-type 'fenced-block)
+                 ;; 结束围栏块
+                 (make-stream-tokenizer_
+                     (stream-tokenizer-complete-blocks tokenizer)
+                     new-pending
+                     'fenced-block
+                     #f)
+                 ;; 继续收集围栏块内容
+                 (make-stream-tokenizer_
+                     (stream-tokenizer-complete-blocks tokenizer)
+                     new-pending
+                     line-type
+                     'fenced-block))))
 
-       ;; 检查是否需要完成当前块并开始新块
-       ((or (env-end line-type current-env tokenizer)
-            (and (should-complete-block prev-type line-type pending-lines)
-                 (not (null? pending-lines))))
-        (let ((new-tokenizer (complete-pending-block tokenizer)))
-          (make-stream-tokenizer_)))))
+          ;; 开始新的围栏代码块
+          ((eq? line-type 'fenced-block)
+           (let ((new-tokenizer (complete-pending-block tokenizer)))
+             (make-stream-tokenizer_
+                 (stream-tokenizer-complete-blocks new-tokenizer)
+                 (list line)
+                 'fenced-block
+                 'fenced-block)))
+
+          ;; 检查是否需要完成当前块并开始新块
+          ((or (env-end line-type current-env tokenizer)
+               (and (should-complete-block prev-type line-type)
+                    (not (null? pending-lines))))
+           (let ((new-tokenizer (complete-pending-block tokenizer)))
+             (make-stream-tokenizer_
+               (stream-tokenizer-complete-blocks new-tokenizer)
+               (list line)
+               (if (eq? line-type 'blank) #f line-type)
+               #f)))
+
+          (else
+            (make-stream-tokenizer_
+              (stream-tokenizer-complete-blocks tokenizer)
+              (cons line pending-lines)
+              line-type
+              current-env)))))
+
 
 ;; 获取所有已完成的块（不会返回正在构建的块）
    (define (stream-tokenizer-get-blocks tokenizer)
@@ -290,7 +297,7 @@
  (define (display-tokenizer-state tokenizer)
    (display "=== Stream Tokenizer State ===")
    (newline)
-   (display "Complete blocks: ") (display (length (stream-tokenizer-complete-blocks tokenizer))) (newline)
-   (display "Pending lines: ") (display (length (stream-tokenizer-pending-lines tokenizer))) (newline)
+   (display "Complete blocks: ") (display (stream-tokenizer-complete-blocks tokenizer)) (newline)
+   (display "Pending lines: ") (display (stream-tokenizer-pending-lines tokenizer)) (newline)
    (display "Pending type: ") (display (stream-tokenizer-prev-type tokenizer)) (newline)))
 
