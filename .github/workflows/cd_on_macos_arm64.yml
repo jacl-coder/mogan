@@ -1,4 +1,4 @@
-name: CD for Mogan STEM on macOS arm64
+name: CD for Liii STEM on macOS arm64
 
 on:
   workflow_dispatch:

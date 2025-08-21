@@ -575,7 +575,7 @@ if is_plat("windows") then
         add_configfiles("$(projectdir)/packages/windows/resource.rc.in", {
             filename = "resource.rc"
         })
-        add_configfiles("$(projectdir)/packages/windows/Xmacs.ico", {
+        add_configfiles("$(projectdir)/packages/windows/" .. stem_binary_name .. ".ico", {
             onlycopy = true
         })
         add_files("$(buildir)/resource.rc")
@@ -820,7 +820,7 @@ xpack("stem") do
         set_specvar("PACKAGE_INSTALL_DIR", stem_lab_big_name .. "\\" .. stem_binary_name .. "-" .. XMACS_VERSION)
         set_specvar("PACKAGE_NAME", stem_binary_name)
         set_specvar("PACKAGE_SHORTCUT_NAME", stem_project_name)
-        set_iconfile(path.join(os.projectdir(), "packages/windows/Xmacs.ico"))
+        set_iconfile(path.join(os.projectdir(), "packages/windows/" .. stem_binary_name .. ".ico"))
         set_bindir("bin")
         add_installfiles(path.join(os.projectdir(), "build/packages/stem/data/bin/(**)|" .. stem_binary_windows), {prefixdir = "bin"})
     end

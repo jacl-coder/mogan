@@ -1,12 +1,12 @@
-Source: mogan-stem
+Source: liii-stem
 Section: editors
 Priority: optional
 Maintainer: Darcy Shen <da@liii.pro>
 Build-Depends: debhelper (>= 7.0.50~)
 Standards-Version: 3.9.1
-Homepage: https://mogan.app
+Homepage: https://liiistem.cn
 
-Package: mogan-stem
+Package: liii-stem
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}, fonts-noto-cjk
 Description:  A structured editor for science and technology

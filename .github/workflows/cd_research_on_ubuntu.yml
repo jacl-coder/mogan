@@ -1,4 +1,4 @@
-name: CD for Mogan STEM on Ubuntu
+name: CD for Liii STEM on Ubuntu
 
 on:
   workflow_dispatch:
@@ -44,17 +44,17 @@ jobs:
         run: |
           packages/debian/package.sh
           # Find and copy the generated .deb file
-          find .. -name "mogan-stem*.deb" -exec cp {} ./mogan-stem-${VERSION}-ubuntu22.04.deb \;
+          find .. -name "liii-stem*.deb" -exec cp {} ./liii-stem-${VERSION}-ubuntu22.04.deb \;
       - name: Upload 
         uses: actions/upload-artifact@v4
         if: ${{ !startsWith(github.ref, 'refs/tags/') }}
         with:
           path: |
-            mogan-stem*.deb
+            liii-stem*.deb
       - name: Release
         uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/')
         with:
           prerelease: true
           files: |
-            mogan-stem*.deb 
+            liii-stem*.deb 
