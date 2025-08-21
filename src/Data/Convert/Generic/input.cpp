@@ -223,6 +223,7 @@ texmacs_input_rep::flush (bool force) {
     break;
   case MODE_MARKDOWN:
     markdown_flush (force);
+    break;
   case MODE_HTML:
     html_flush (force);
     break;
