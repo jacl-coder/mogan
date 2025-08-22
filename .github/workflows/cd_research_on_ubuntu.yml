@@ -6,6 +6,9 @@ on:
     tags:
       - '*'
 
+permissions:
+  contents: write
+
 jobs:
   ubuntubuild:
     runs-on: ubuntu-22.04
