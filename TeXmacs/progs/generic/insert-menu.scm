@@ -186,5 +186,5 @@
       (=> (balloon (icon "tm_shell.xpm")
 		   "Start an interactive session")
 	  (link insert-session-menu))
-      ((balloon (icon "tm_ai.xpm") "AI")
-       (open-url "https://liiistem.cn?from=ai_button"))))
+      (assuming (not (connection-defined? "llm")) ((balloon (icon "tm_ai.xpm") "AI")
+        (open-url "https://liiistem.cn?from=ai_button")))))
