@@ -131,14 +131,25 @@
     (:require (has-binary-goldfish?))
     (:require (has-binary-pandoc?))
     ,@(all-llm-launchers)
-    (:serializer ,llm-serialize)
-    (:session "LLM"))
+    (:serializer ,llm-serialize))
   
   (when (supports-llm?)
     (for-each
       (lambda (x)
         (session-enable-text-input "llm" x))
       extra-menus)))
+
+;; AI menu integration, keeping old extra-menus
+(tm-menu (ai-menu)
+  ((verbatim "default") (make-session "llm" "default"))
+  (for (model extra-menus)
+    (assuming (!= model "default")
+      ((eval `(verbatim ,model)) (make-session "llm" model)))))
+
+(menu-bind texmacs-insert-icons
+  (former)
+  (=> (balloon (icon "tm_ai.xpm") "AI")
+       (link ai-menu)))
 
 ) ; end of begin
 ) ; end of define-library
