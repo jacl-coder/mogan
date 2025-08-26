@@ -18,7 +18,8 @@
    (temperature float?)
    (stream boolean?)
    (key string?)
-   (proxy any?))
+   (proxy any?)
+   (default-system string?))
 
   (define (@from-json profile-j provider-j)
     (let ((name (profile-j :get-string "name" ""))
@@ -31,8 +32,9 @@
           (temperature (profile-j :get-number "temperature" 0.7))
           (stream #t)
           (key (provider-j :get-string "api_key" ""))
-          (proxy ((provider-j "proxy") :get-or-else '())))
-      (model-profile name model provider base-url max-tokens temperature stream key proxy))))
+          (proxy ((provider-j "proxy") :get-or-else '()))
+          (default-system (provider-j :get-string "default_system" "")))
+      (model-profile name model provider base-url max-tokens temperature stream key proxy default-system))))
 
 (define-case-class llm-message
   ((role string?)

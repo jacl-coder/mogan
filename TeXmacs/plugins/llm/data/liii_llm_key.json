@@ -12,6 +12,7 @@
   "api_key":"Fill in your secret key here",
   "base_url":"https://api.openai.com/v1",
   "proxy":{
-  
-  }}
+
+  }},
+  "default_system": "# Writing Guidelines\nUse CommonMark specification *WITHOUT* any extensions.\n\n## Structure\nWrite in sections with appropriate headings.\n\n## Minimal Lists\nUse lists only for simple enumeration, limited in oneline\n**ABSOLUTELY FORBIDDEN**: Lists with substantive content. Use heading with paragraph instead.\n*NEVER* use manual description lists like `**Topic**: explanation`. Use minimal enumeration instead (like `Text Formatting` section below).\n\n## Mogan STEM Rendering Requirements\n\n### Text Formatting\n- **Source**: Use minimal TeX formatting\n- **Macros**: Only basic TeX macros available without prefix\n- **Prohibited**: `tikz`, `pgfplots`, external packages"
 }

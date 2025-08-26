@@ -35,12 +35,6 @@
          (left ($ "HTTP状态码为" :+ (r 'status-code) :+ "，存在HTTP请求错误，请查看对应服务提供商的状态码对应的报错原因" :get)))))
 
 (define state (make-stream-tokenizer))
-(define (make-counter)
-  (let ((count 0))
-    (lambda ()
-      (set! count (+ count 1))
-      count)))
-(define begin-counter (make-counter))
 
 (define (flush-markdown-block! content)
   (log :debug "Flushing markdown blocks content: " content)
@@ -63,14 +57,23 @@
     (for-each case-block blocks)))
 
 (define (case-block block)
-  (data-begin) (begin-counter)
   (let ((type (car block))
         (content (cdr block)))
     (case type
-      ((thematic-break) (display "scheme:(document (hrule) \"\")"))
-      ((heading)        (display (string-append "markdown:" content " {.unnumbered .unlisted}")))
-      (else             (display (string-append "markdown:" content)))))
+      ((thematic-break) (begin (flush-verbatim "\n")
+                               (flush-scheme '(document (hrule) ""))))
+      ((heading)        (begin (flush-markdown (string-append content " {.unnumbered .unlisted}")))
+                               (flush-verbatim "\n"))
+      ((list-item)      (begin (flush-markdown content))
+                               (flush-verbatim "\n"))
+      ((math-block)     (flush-latex content))
+      (else             (flush-markdown content))))
   (flush-output-port))
+
+(define (get-output-string/cache out-port)
+  (let ((s (get-output-string out-port #t)))
+    (set! cache (cache :append (llm-message "assistant" s)))
+    s))
 
 (define (process-streaming-response data out-port)
   (let* ((d (string-trim-both (string-drop data 6)))
@@ -78,9 +81,6 @@
     (if (string=? d "[DONE]")
       (begin
         (force-flush-markdown-block! (get-output-string out-port #t))
-        (for-each
-          (lambda (_) (data-end))
-          (iota (begin-counter)))
         (data-end))
       (let* ((content (((j "choices" 0) "delta") :get-string "content" ""))
              (lines ($ content :split "\n")))
@@ -93,7 +93,7 @@
               :for-each
               (lambda (line)
                 (display line out-port)
-                (flush-markdown-block! (get-output-string out-port #t))))
+                (flush-markdown-block! (get-output-string/cache out-port))))
              ;; 把最后一行放入新缓冲区
              (display (lines :last) out-port))
             (else
@@ -111,6 +111,9 @@
                            (and (pair? proxy-value) (null? (car proxy-value))))
                       '()
                       proxy-value)))
+    (data-begin)
+    ;; init markdown mode
+    (display (string-append "markdown:" ""))
     (http-stream-post req-url callback
                       :userdata (open-output-string)
                       :data req-data
@@ -124,7 +127,7 @@
   (log :debug "Starting user-chat function...")
   (let* ((q (cache :append msg)))
     (log :debug "Added message to cache, about to call streaming llm function...")
-    (llm q mp) (set! cache q)
+    (llm q mp)
     (log :debug "user-chat function completed")))
 
 (define (magic-chat-of-include msg)
@@ -212,7 +215,9 @@
 (define (chat msg mp)
   (if ($ msg :starts-with "%")
       (magic-chat msg mp)
-      (user-chat (llm-message "user" msg) mp)))
+      (begin
+        (set! cache (cache :append (llm-message "system" (mp 'default-system))))
+        (user-chat (llm-message "user" msg) mp))))
 
 )
 )

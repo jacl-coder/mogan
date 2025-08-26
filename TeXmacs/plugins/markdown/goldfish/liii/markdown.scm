@@ -76,18 +76,21 @@
                        (< i (string-length trimmed))
                        (char=? (string-ref trimmed i) #\space)))))))
 
+   ;; NOTE: unicode aware
    (define (is-thematic-break? line)
      (let ((trimmed (string-trim line)))
-       (let ((c (if (> (string-length trimmed) 0) (string-ref trimmed 0) #f)))
-         (and (or (char=? c #\*) (char=? c #\-) (char=? c #\_))
+       (let ((u (if (> (string-length trimmed) 0) (string->utf8 trimmed 0 1) #f)))
+         ;;                 *****             ------            _____
+         (and (or (equal? u #u(42)) (equal? u #u(45)) (equal? u #u(95))
+                  (equal? u #u(226 148 128))) ; ───
               (>= (string-length trimmed) 3)
               (let loop ((i 0) (count 0))
                 (cond
-                  ((= i (string-length trimmed)) (>= count 3))
-                  ((char=? (string-ref trimmed i) c)
+                  ((= i (u8-string-length trimmed)) (>= count 3))
+                  ((equal? (string->utf8 trimmed i (+ i 1)) u)
                    (loop (+ i 1) (+ count 1)))
-                  ((or (char=? (string-ref trimmed i) #\space)
-                       (char=? (string-ref trimmed i) #\tab))
+                  ((or (equal? (string->utf8 trimmed i (+ i 1)) #u(32)) ; space
+                       (equal? (string->utf8 trimmed i (+ i 1)) #u(9))) ; tab
                    (loop (+ i 1) count))
                   (else #f)))))))
 
@@ -129,6 +132,10 @@
        (or (string-starts? trimmed "```")
            (string-starts? trimmed "~~~"))))
 
+   (define (is-math-block? line)
+     (let ((trimmed (string-trim line)))
+       (string-starts? trimmed "$$")))
+
    (define (is-table-row? line)
      (let ((trimmed (string-trim line)))
        (and (>= (string-length trimmed) 3)
@@ -144,6 +151,7 @@
        ((is-blockquote? line) 'blockquote)
        ((is-list-item? line current-env) 'list-item)
        ((is-indented-block? line) 'indented-block)
+       ((is-math-block? line) 'math-block)
        ((is-fenced-block? line) 'fenced-block)
        ((is-table-row? line) 'table)
        (else 'paragraph)))
@@ -154,7 +162,7 @@
        ;; 如果类型变化，完成当前块
        ((not prev-type) #f)
        ((and (eq? prev-type 'paragraph)
-             (eq? new-type 'blank)) #f)
+             (eq? new-type 'blank)) #t) ; 段落遇到空行就完成当前段落块
        ((not (eq? prev-type new-type)) #t)
        (else #f)))
 
@@ -176,8 +184,11 @@
      (cond
        ((and (eq? line-type 'fenced-block)
              (eq? current-env 'fenced-block)) #t)
-       ((eq? line-type 'fenced-block)
-       ;; (not (eq? current-env 'fenced-block))
+       ((and (eq? line-type 'math-block)
+             (eq? current-env 'math-block)) #t)
+       ((or (eq? line-type 'fenced-block) (eq? line-type 'math-block))
+        ;; (not (eq? current-env 'fenced-block)
+        ;;      (eq? current-env 'math-block))
         (set-current-env! tokenizer line-type)
         #f)
        (else #f)))
@@ -189,20 +200,30 @@
             (current-env   (stream-tokenizer-current-env tokenizer))
             (line-type     (get-line-type line current-env)))
        (cond
-          ;; 空行完成非段落块，段落块保留空白行
+          ;; 空行完成所有块，包括段落块
           ((eq? line-type 'blank)
            (cond
              ((null? pending-lines) tokenizer)  ; 无内容跳过空行
-             ((eq? prev-type 'paragraph)
-              ;; 把空行作为段落块的一部分
-              (make-stream-tokenizer_
-                  (stream-tokenizer-complete-blocks tokenizer)
-                  (cons line pending-lines)
-                  prev-type
-                  #f))
              (else
-              ;; 非段落块遇到空行完成当前块
+              ;; 所有类型遇到空行都完成当前块（包括段落）
               (complete-pending-block tokenizer))))
+
+          ;; 处理数学块（当前已经是math-block）
+          ((eq? current-env 'math-block)
+           (let ((new-pending (cons line pending-lines)))
+             (if (eq? line-type 'math-block)
+                 ;; 结束数学块
+                 (make-stream-tokenizer_
+                     (stream-tokenizer-complete-blocks tokenizer)
+                     new-pending
+                     'math-block
+                     #f)
+                 ;; 继续收集数学块内容
+                 (make-stream-tokenizer_
+                     (stream-tokenizer-complete-blocks tokenizer)
+                     new-pending
+                     line-type
+                     'math-block))))
 
           ;; 处理围栏代码块（当前已经是fenced-block）
           ((eq? current-env 'fenced-block)
@@ -220,6 +241,15 @@
                      new-pending
                      line-type
                      'fenced-block))))
+
+          ;; 开始新的数学块
+          ((eq? line-type 'math-block)
+           (let ((new-tokenizer (complete-pending-block tokenizer)))
+             (make-stream-tokenizer_
+                 (stream-tokenizer-complete-blocks new-tokenizer)
+                 (list line)
+                 'math-block
+                 'math-block)))
 
           ;; 开始新的围栏代码块
           ((eq? line-type 'fenced-block)
