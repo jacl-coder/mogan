@@ -388,3 +388,4 @@
 ("customizing the TeXmacs styles" "定制 TeXmacs 样式")
 ("cut text" "剪切文本")
 ("cut to" "剪切到")
+("gaussian" "高斯曲线")
